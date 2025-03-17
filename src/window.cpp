@@ -18,6 +18,12 @@ bool Window::init() {
         SDL_LogCritical(SDL_LOG_CATEGORY_ERROR, "SDL_InitSubSystem Error: %s", SDL_GetError());
         return false;
     }
+
+    if (!TTF_Init()) {
+        SDL_LogCritical(SDL_LOG_CATEGORY_ERROR, "TTF_Init Error");
+        return false;
+    }
+
     return true;
 }
 
