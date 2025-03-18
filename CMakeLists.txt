@@ -12,7 +12,10 @@ add_subdirectory(vendors/SDL_ttf EXCLUDE_FROM_ALL)
 add_executable(gameboy_cpp
         app/main.cpp
         src/emulator.cpp
-        src/window.cpp)
+        src/window.cpp
+        src/cartridge.cpp
+        src/utils/file_util.cpp
+        src/bus.cpp)
 
 target_include_directories(gameboy_cpp PRIVATE include)
 
