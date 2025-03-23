@@ -3,9 +3,8 @@
 #include <cstdint>
 #include <vector>
 
-class FileUtil {
-public:
-    static std::vector<uint8_t> readFile(const char* filename);
+namespace FileUtil {
+    std::vector<uint8_t> readFile(const char* filename);
 };
 
 #endif //FILEUTIL_H

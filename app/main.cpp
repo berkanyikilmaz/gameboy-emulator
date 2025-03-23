@@ -4,7 +4,9 @@
 int main(int argc, char** argv) {
     std::cout << "Hello, World!" << std::endl;
 
-    Emulator emulator;
-    emulator.run(argc, argv);
+    Emulator emulator(argc, argv);
+    emulator.run();
     return 0;
+
+
 }

@@ -4,12 +4,15 @@
 #include <cstdint>
 #include <iostream>
 
-class Debug {
-public:
-    static void log(const char* msg, uint16_t data);
+namespace Debug {
+    void log(const char* msg, uint16_t data);
+    void log(const char* msg, uint8_t data);
 
-    static void logErr(const char* msg, uint16_t data);
+    void logErr(const char* msg, uint16_t data);
+    void logErr(const char *msg, uint8_t data);
+
+    void log(const char* msg);
+    void log(const std::string& msg);
 };
-
 
 #endif //DEBUG_H

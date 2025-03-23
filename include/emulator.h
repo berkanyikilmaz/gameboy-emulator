@@ -2,25 +2,28 @@
 #define EMULATOR_H
 
 #include <cstdint>
+#include <memory>
 
 #include "window.h"
-
-struct EmulatorContext {
-    bool paused;
-    bool running;
-    uint64_t ticks;
-};
+#include "bus.h"
+#include "cpu.h"
+#include "cartridge.h"
 
 class Emulator {
 public:
-    Emulator();
+    Emulator(int argc, char** argv);
 
-    void run(int argc, char** argv);
-
-    const EmulatorContext& getContext() const { return m_context; }
+    void run();
+    void cycle(int cycleCount);
 private:
-    EmulatorContext m_context;
-    Window m_window;
+    bool m_paused;
+    bool m_running;
+    uint64_t m_ticks;
+
+    std::unique_ptr<Window> m_window;
+    std::unique_ptr<Bus> m_bus;
+    std::unique_ptr<CPU> m_cpu;
+    std::unique_ptr<Cartridge> m_cartridge;
 };
 
 #endif //EMULATOR_H

@@ -3,6 +3,16 @@ project(gameboy_cpp)
 
 set(CMAKE_CXX_STANDARD 20)
 
+include(FetchContent)
+
+FetchContent_Declare(
+        magic_enum
+        GIT_REPOSITORY https://github.com/Neargye/magic_enum.git
+        GIT_TAG        v0.9.7
+)
+
+FetchContent_MakeAvailable(magic_enum)
+
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 
@@ -15,10 +25,14 @@ add_executable(gameboy_cpp
         src/window.cpp
         src/cartridge.cpp
         src/utils/file_util.cpp
-        src/bus.cpp)
+        src/bus.cpp
+        src/cpu.cpp
+        src/instructions.cpp
+        src/utils/debug.cpp)
 
 target_include_directories(gameboy_cpp PRIVATE include)
 
 target_link_libraries(gameboy_cpp PRIVATE
         SDL3::SDL3
-        SDL3_ttf::SDL3_ttf)
+        SDL3_ttf::SDL3_ttf
+        magic_enum::magic_enum)

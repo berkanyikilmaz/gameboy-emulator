@@ -1,7 +1,3 @@
-//
-// Created by Berkan Yıkılmaz on 18.03.2025.
-//
-
 #ifndef INSTRUCTIONS_H
 #define INSTRUCTIONS_H
 #include <cstdint>
@@ -97,11 +93,12 @@ enum InstructionMnemonic {
     IM_SRL,
     IM_BIT,
     IM_RES,
-    IM_SET
+    IM_SET,
+    IM_COUNT
 };
 
-enum class CondType {
-    NONE, NZ, Z, NC, C
+enum CondType {
+    CT_NONE, CT_NZ, CT_Z, CT_NC, CT_C
 } ;
 
 struct Instruction {
@@ -113,6 +110,6 @@ struct Instruction {
     uint8_t parameters;
 };
 
-Instruction& getInstructionByOpcode(uint8_t opcode);
+Instruction* getInstructionByOpcode(uint8_t opcode);
 
 #endif //INSTRUCTIONS_H

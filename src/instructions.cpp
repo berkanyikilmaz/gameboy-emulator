@@ -14,6 +14,6 @@ Instruction instructions[0x100] = {
     [0xF3] = {IM_DI}
 };
 
-Instruction& getInstructionByOpcode(uint8_t opcode) {
-    return instructions[opcode];
+Instruction* getInstructionByOpcode(uint8_t opcode) {
+    return &instructions[opcode];
 }

@@ -1,7 +1,3 @@
-//
-// Created by Berkan Yıkılmaz on 18.03.2025.
-//
-
 #ifndef COMMON_H
 #define COMMON_H
 
