@@ -21,5 +21,4 @@ namespace BitUtils {
     }
 };
 
-
 #endif //BIT_UTILS_H

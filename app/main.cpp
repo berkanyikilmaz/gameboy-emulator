@@ -7,6 +7,4 @@ int main(int argc, char** argv) {
     Emulator emulator(argc, argv);
     emulator.run();
     return 0;
-
-
 }

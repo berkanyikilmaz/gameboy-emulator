@@ -35,6 +35,7 @@ public:
     void executeInstruction();
 
     const uint8_t readReg(RegisterType regType) const;
+    void writeReg(RegisterType regType, uint16_t data);
     const bool getFlagZ() const { return BitUtils::getBit(m_registers.F, 7); }
     const bool getFlagC() const { return BitUtils::getBit(m_registers.F, 4); }
 

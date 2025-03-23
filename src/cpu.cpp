@@ -55,9 +55,24 @@ void CPU::fetchInstruction() {
     m_registers.PC++;
 }
 
+/*
+*I suppose you could make the switch/case a lot faster with threaded code.
+Make a hash value for each op_code. e.g.
+hash(AM_MR_R) => 29
+Then make a lookup table (e.g. static void *labels[op_codes];) that takes these hashes and points directly to the execution code like this:
+
+#define EXECUTE  goto *(labels[op_code])
+
+this will make the code from O(n) to O(1) which I suppose is a good optimization, since the CPU instruction-lookup is the heart of the simulation, and you have more than 200 opcodes to check!
+ *
+ * NOTES FOR THE FUTURE!!!
+ */
 void CPU::fetchData() {
     m_memDest = 0;
     m_destIsMem = false;
+
+    uint8_t lo, hi;
+    uint16_t addr;
 
     switch (m_currInstruction->addrMode) {
         case AM_IMP:
@@ -65,22 +80,113 @@ void CPU::fetchData() {
         case AM_R:
             m_fetchedData = readReg(m_currInstruction->reg1);
             return;
+        case AM_R_R:
+            m_fetchedData = readReg(m_currInstruction->reg2);
+            return;
         case AM_R_D8:
+        case AM_R_A8:
+        case AM_HL_SPR:
+        case AM_D8:
             m_fetchedData = m_bus->read(m_registers.PC);
             m_emulator->cycle(1);
             m_registers.PC++;
             return;
         case AM_D16:
-            const uint8_t lo = m_bus->read(m_registers.PC);
+        case AM_R_D16:
+            lo = m_bus->read(m_registers.PC);
             m_emulator->cycle(1);
             m_registers.PC++;
 
-            const uint8_t hi = m_bus->read(m_registers.PC);
+            hi = m_bus->read(m_registers.PC);
             m_emulator->cycle(1);
             m_registers.PC++;
 
             m_fetchedData = (hi << 8) | lo;
             return;
+        case AM_MR_R:
+            m_fetchedData = readReg(m_currInstruction->reg2);
+            m_memDest = readReg(m_currInstruction->reg1);
+            if (m_currInstruction->reg1 == RT_C) {
+                m_memDest |= 0xFF00;
+                }
+            m_destIsMem = true;
+            return;
+        case AM_R_MR:
+            addr = readReg(m_currInstruction->reg2);
+            if (m_currInstruction->reg2 == RT_C) {
+                addr |= 0xFF00;
+            }
+            m_fetchedData = m_bus->read(addr);
+            m_emulator->cycle(1);
+            return;
+        case AM_R_HLI:
+            m_fetchedData = m_bus->read(readReg(RT_HL));
+            m_emulator->cycle(1);
+            writeReg(RT_HL, readReg(RT_HL) + 1);
+            return;
+        case AM_R_HLD:
+            m_fetchedData = m_bus->read(readReg(RT_HL));
+            m_emulator->cycle(1);
+            writeReg(RT_HL, readReg(RT_HL) - 1);
+            return;
+        case AM_HLI_R:
+            m_fetchedData = readReg(m_currInstruction->reg2);
+            m_memDest = readReg(RT_HL);
+            m_destIsMem = true;
+            writeReg(RT_HL, readReg(RT_HL) + 1);
+            return;
+        case AM_HLD_R:
+            m_fetchedData = readReg(m_currInstruction->reg2);
+            m_memDest = readReg(RT_HL);
+            m_destIsMem = true;
+            writeReg(RT_HL, readReg(RT_HL) - 1);
+            return;
+        case AM_A8_R:
+            m_fetchedData = readReg(m_currInstruction->reg2);
+            m_memDest = m_bus->read(m_registers.PC) | 0xFF00;
+            m_destIsMem = true;
+            m_emulator->cycle(1);
+            m_registers.PC++;
+            return;
+        case AM_A16_R:
+        case AM_D16_R:
+            lo = m_bus->read(m_registers.PC);
+            m_emulator->cycle(1);
+            m_registers.PC++;
+
+            hi = m_bus->read(m_registers.PC);
+            m_emulator->cycle(1);
+            m_registers.PC++;
+
+            m_memDest = (hi << 8) | lo;
+            m_destIsMem = true;
+            m_fetchedData = readReg(m_currInstruction->reg2);
+        case AM_MR_D8:
+            m_fetchedData = m_bus->read(m_registers.PC);
+            m_emulator->cycle(1);
+            m_registers.PC++;
+
+            m_memDest = readReg(m_currInstruction->reg1);
+            m_destIsMem = true;
+            return;
+        case AM_MR:
+            m_memDest = readReg(m_currInstruction->reg1);
+            m_destIsMem = true;
+            m_fetchedData = m_bus->read(readReg(m_currInstruction->reg1));
+            m_emulator->cycle(1);
+            return;
+        case AM_R_A16:
+            lo = m_bus->read(m_registers.PC);
+            m_emulator->cycle(1);
+            m_registers.PC++;
+
+            hi = m_bus->read(m_registers.PC);
+            m_emulator->cycle(1);
+            m_registers.PC++;
+
+            addr = (hi << 8) | lo;
+            m_fetchedData = m_bus->read(addr);
+            m_emulator->cycle(1);
     }
 }
 
@@ -98,7 +204,29 @@ void CPU::executeNOP() {
 }
 
 void CPU::executeLD() {
-    NO_IMPL;
+    if (m_destIsMem) {
+        if (m_currInstruction->reg2 >= RT_AF) {
+            m_bus->write16(m_memDest, m_fetchedData);
+            m_emulator->cycle(1);
+        }
+        else {
+            m_bus->write(m_memDest, m_fetchedData);
+        }
+
+        return;
+    }
+
+    if (m_currInstruction->addrMode == AM_HL_SPR) {
+        writeReg(m_currInstruction->reg1,
+            readReg(m_currInstruction->reg2) + static_cast<uint8_t>(m_fetchedData));
+
+        const bool h = (readReg(m_currInstruction->reg2) & 0xF) + (m_fetchedData & 0xF) >= 0x10;
+        const bool c = (readReg(m_currInstruction->reg2) & 0xFF) + (m_fetchedData & 0xFF) >= 0x100;
+        setFlags(0, 0, h, c);
+        return;
+    }
+
+    writeReg(m_currInstruction->reg1, m_fetchedData);
 }
 
 void CPU::executeJP() {
@@ -186,6 +314,59 @@ const uint8_t CPU::readReg(RegisterType regType) const {
         default:
             Debug::logErr("Unknown register type", static_cast<uint8_t>(regType));
         return 0;
+    }
+}
+
+void CPU::writeReg(const RegisterType regType, const uint16_t data) {
+    switch (regType) {
+        case RT_A:
+            m_registers.A = data & 0xFF;
+            return;
+        case RT_F:
+            m_registers.F = data & 0xFF;
+            return;
+        case RT_B:
+            m_registers.B = data & 0xFF;
+            return;
+        case RT_C:
+            m_registers.C = data & 0xFF;
+            return;
+        case RT_D:
+            m_registers.D = data & 0xFF;
+            return;
+        case RT_E:
+            m_registers.E = data & 0xFF;
+            return;
+        case RT_H:
+            m_registers.H = data & 0xFF;
+            return;
+        case RT_L:
+            m_registers.L = data & 0xFF;
+            return;
+        case RT_AF:
+            m_registers.A = (data >> 8) & 0xFF;
+            m_registers.F = data & 0xFF;
+            return;
+        case RT_BC:
+            m_registers.B = (data >> 8) & 0xFF;
+            m_registers.C = data & 0xFF;
+            return;
+        case RT_DE:
+            m_registers.D = (data >> 8) & 0xFF;
+            m_registers.E = data & 0xFF;
+            return;
+        case RT_HL:
+            m_registers.H = (data >> 8) & 0xFF;
+            m_registers.L = data & 0xFF;
+            return;
+        case RT_SP:
+            m_registers.SP = data;
+            return;
+        case RT_PC:
+            m_registers.PC = data;
+            return;
+        default:
+            Debug::logErr("Unknown register type", static_cast<uint8_t>(regType));
     }
 }
 
