@@ -6,6 +6,7 @@
 
 #include "emulator.h"
 #include "bus.h"
+#include "stack.h"
 #include "instructions.h"
 #include "utils/debug.h"
 
@@ -17,14 +18,23 @@ static constexpr std::array<void(CPU::*)(), static_cast<size_t>(IM_COUNT)> getIn
     arr[IM_LD] = &CPU::executeLD;
     arr[IM_LDH] = &CPU::executeLDH;
     arr[IM_JP] = &CPU::executeJP;
+    arr[IM_JR] = &CPU::executeJR;
+    arr[IM_RST] = &CPU::executeRST;
+    arr[IM_CALL] = &CPU::executeCALL;
+    arr[IM_RET] = &CPU::executeRET;
+    arr[IM_RETI] = &CPU::executeRETI;
     arr[IM_DI] = &CPU::executeDI;
+    arr[IM_XOR] = &CPU::executeXOR;
+    arr[IM_POP] = &CPU::executePOP;
+    arr[IM_PUSH] = &CPU::executePUSH;
 
     return arr;
 };
 
 CPU::CPU(Emulator *emulator)
-    : m_registers(Registers()), m_fetchedData(0), m_memDest(0), m_destIsMem(false), m_currOpcode(0)
-      , m_currInstruction(nullptr), m_instructionHandlers(getInstructionHandlers()), m_halted(false), m_IME(false), m_emulator(emulator)
+    : m_registers(Registers()), m_stack(nullptr), m_fetchedData(0), m_memDest(0), m_destIsMem(false), m_currOpcode(0)
+      , m_currInstruction(nullptr), m_instructionHandlers(getInstructionHandlers()), m_halted(false), m_IME(false),
+      m_emulator(emulator)
       , m_bus(nullptr) {
     m_registers.PC = 0x100;
 }
@@ -41,6 +51,7 @@ bool CPU::step() {
 
 void CPU::connectBus(Bus *bus) {
     m_bus = bus;
+    m_stack = std::make_unique<Stack>(&m_registers, m_bus);
 }
 
 void CPU::fetchInstruction() {
@@ -61,7 +72,7 @@ void CPU::fetchData() {
     m_memDest = 0;
     m_destIsMem = false;
 
-    uint8_t lo, hi;
+    uint16_t lo, hi;
     uint16_t addr;
 
     switch (m_currInstruction->addrMode) {
@@ -228,13 +239,42 @@ void CPU::executeLDH() {
 }
 
 void CPU::executeJP() {
-    if (checkCond()) {
-        m_registers.PC = m_fetchedData;
+    jumpToAddr(m_fetchedData, false);
+}
+
+void CPU::executeCALL() {
+    jumpToAddr(m_fetchedData, true);
+}
+
+void CPU::executeRET() {
+    if (m_currInstruction->cond != CT_NONE) {
         m_emulator->cycle(1);
-        Debug::log("\tCondition met, jumped to address", m_fetchedData);
-        return;
     }
-    Debug::log("\tCondition not met");
+
+    if (checkCond()) {
+        uint16_t lo = m_stack->pop();
+        m_emulator->cycle(1);
+        uint16_t hi = m_stack->pop();
+        m_emulator->cycle(1);
+
+        m_registers.PC = (hi << 8) | lo;
+        m_emulator->cycle(1);
+    }
+}
+
+void CPU::executeRETI() {
+    m_IME = true;
+    executeRET();
+}
+
+void CPU::executeJR() {
+    const auto relative = static_cast<int8_t>(m_fetchedData & 0xFF);
+    const uint16_t addr = m_registers.PC + relative;
+    jumpToAddr(addr, false);
+}
+
+void CPU::executeRST() {
+    jumpToAddr(m_currInstruction->parameters, true);
 }
 
 void CPU::executeDI() {
@@ -244,6 +284,43 @@ void CPU::executeDI() {
 void CPU::executeXOR() {
     m_registers.A = m_registers.A ^ m_fetchedData;
     setFlags(m_registers.A, false, false, false);
+}
+
+void CPU::executePOP() {
+    const uint16_t lo = m_stack->pop();
+    m_emulator->cycle(1);
+    const uint16_t hi = m_stack->pop();
+    m_emulator->cycle(1);
+
+    const uint16_t data = (hi << 8) | lo;
+    writeReg(m_currInstruction->reg1, data);
+
+    if (m_currInstruction->reg1 == RT_AF) {
+        m_registers.F &= 0xF0;
+    }
+}
+
+// TODO: Test this method, it might not work as intended.
+void CPU::executePUSH() {
+    const uint16_t data = readReg(m_currInstruction->reg1);
+    m_emulator->cycle(1);
+    m_stack->push((data >> 8) & 0xFF);
+
+    m_emulator->cycle(1);
+    m_stack->push(data & 0xFF);
+
+    m_emulator->cycle(1);
+}
+
+void CPU::jumpToAddr(const uint16_t addr, const bool savePC) {
+    if (checkCond()) {
+        if (savePC) {
+            m_stack->push16(m_registers.PC);
+            m_emulator->cycle(2);
+        }
+        m_registers.PC = addr;
+        m_emulator->cycle(1);
+    }
 }
 
 void CPU::setFlags(const char z, const char n, const char h, const char c) {
@@ -276,7 +353,7 @@ bool CPU::checkCond() {
     return false;
 }
 
-const uint8_t CPU::readReg(RegisterType regType) const {
+const uint16_t CPU::readReg(RegisterType regType) const {
     switch (regType) {
         case RT_A:
             return m_registers.A;

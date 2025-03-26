@@ -1,10 +1,11 @@
 #ifndef CPU_H
 #define CPU_H
+#include <memory>
 #include <array>
-#include <bus.h>
 #include <cstdint>
 
 #include "instructions.h"
+#include "stack.h"
 #include "utils/bit_utils.h"
 
 class Emulator;
@@ -35,7 +36,7 @@ public:
     void fetchData();
     void executeInstruction();
 
-    const uint8_t readReg(RegisterType regType) const;
+    const uint16_t readReg(RegisterType regType) const;
     void writeReg(RegisterType regType, uint16_t data);
     const bool getFlagZ() const { return BitUtils::getBit(m_registers.F, 7); }
     const bool getFlagC() const { return BitUtils::getBit(m_registers.F, 4); }
@@ -49,8 +50,17 @@ public:
     void executeLD();
     void executeLDH();
     void executeJP();
+    void executeJR();
+    void executeRST();
+    void executeCALL();
+    void executeRET();
+    void executeRETI();
     void executeDI();
     void executeXOR();
+    void executePOP();
+    void executePUSH();
+
+    void jumpToAddr(uint16_t addr, bool savePC);
 
     void setFlags(char z, char n, char h, char c);
     bool checkCond();
@@ -61,6 +71,7 @@ public:
     void printInstruction();
 private:
     Registers m_registers;
+    std::unique_ptr<Stack> m_stack;
 
     uint16_t m_fetchedData;
     uint16_t m_memDest;

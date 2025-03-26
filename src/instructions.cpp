@@ -19,22 +19,27 @@ Instruction instructions[0x100] = {
     [0x12] = {IM_LD, AM_MR_R, RT_DE, RT_A},
     [0x15] = {IM_DEC, AM_R, RT_D},
     [0x16] = {IM_LD, AM_R_D8, RT_D},
+    [0x18] = {IM_JR, AM_D8},
     [0x1A] = {IM_LD, AM_R_MR, RT_A, RT_DE},
     [0x1E] = {IM_LD, AM_R_D8, RT_E},
 
     //0x2X
+    [0x20] = {IM_JR, AM_D8, RT_NONE, RT_NONE, CT_NZ},
     [0x21] = {IM_LD, AM_R_D16, RT_HL},
     [0x22] = {IM_LD, AM_HLI_R, RT_HL, RT_A},
     [0x25] = {IM_DEC, AM_R, RT_H},
     [0x26] = {IM_LD, AM_R_D8, RT_H},
+    [0x28] = {IM_JR, AM_D8, RT_NONE, RT_NONE, CT_Z},
     [0x2A] = {IM_LD, AM_R_HLI, RT_A, RT_HL},
     [0x2E] = {IM_LD, AM_R_D8, RT_L},
 
     //0x3X
+    [0x30] = {IM_JR, AM_D8, RT_NONE, RT_NONE, CT_NC},
     [0x31] = {IM_LD, AM_R_D16, RT_SP},
     [0x32] = {IM_LD, AM_HLD_R, RT_HL, RT_A},
     [0x35] = {IM_DEC, AM_R, RT_HL},
     [0x36] = {IM_LD, AM_MR_D8, RT_HL},
+    [0x38] = {IM_JR, AM_D8, RT_NONE, RT_NONE, CT_C},
     [0x3A] = {IM_LD, AM_R_HLD, RT_A, RT_HL},
     [0x3E] = {IM_LD, AM_R_D8, RT_A},
 
@@ -112,18 +117,51 @@ Instruction instructions[0x100] = {
 
     [0xAF] = {IM_XOR, AM_R, RT_A},
 
+    [0xC0] = {IM_RET, AM_IMP, RT_NONE, RT_NONE, CT_NZ},
+    [0xC1] = {IM_POP, AM_IMP, RT_BC},
+    [0xC2] = {IM_JP, AM_D16, RT_NONE, RT_NONE, CT_NZ},
     [0xC3] = {IM_JP, AM_D16},
+    [0xC4] = {IM_CALL, AM_D16, RT_NONE, RT_NONE, CT_NZ},
+    [0xC5] = {IM_PUSH, AM_IMP, RT_BC},
+    [0xC7] = {IM_RST, AM_IMP, RT_NONE, RT_NONE, CT_NONE, 0x00},
+    [0xC8] = {IM_RET, AM_IMP, RT_NONE, RT_NONE, CT_Z},
+    [0xC9] = {IM_RET, AM_IMP},
+    [0xCA] = {IM_JP, AM_D16, RT_NONE, RT_NONE, CT_Z},
+    [0xCC] = {IM_CALL, AM_D16, RT_NONE, RT_NONE, CT_Z},
+    [0xCD] = {IM_CALL, AM_D16},
+    [0xCF] = {IM_RST, AM_IMP, RT_NONE, RT_NONE, CT_NONE, 0x08},
+
+    [0xD0] = {IM_RET, AM_IMP, RT_NONE, RT_NONE, CT_NC},
+    [0xD1] = {IM_POP, AM_IMP, RT_DE},
+    [0xD2] = {IM_JP, AM_D16, RT_NONE, RT_NONE, CT_NC},
+    [0xD4] = {IM_CALL, AM_D16, RT_NONE, RT_NONE, CT_NC},
+    [0xD5] = {IM_PUSH, AM_IMP, RT_DE},
+    [0xD7] = {IM_RST, AM_IMP, RT_NONE, RT_NONE, CT_NONE, 0x10},
+    [0xD8] = {IM_RET, AM_IMP, RT_NONE, RT_NONE, CT_C},
+    [0xD9] = {IM_RETI, AM_IMP},
+    [0xDA] = {IM_JP, AM_D16, RT_NONE, RT_NONE, CT_C},
+    [0xDC] = {IM_CALL, AM_D16, RT_NONE, RT_NONE, CT_C},
+    [0xDF] = {IM_RST, AM_IMP, RT_NONE, RT_NONE, CT_NONE, 0x18},
 
     //0xEX
     [0xE0] = {IM_LDH, AM_A8_R, RT_NONE, RT_A},
+    [0xE1] = {IM_POP, AM_IMP, RT_HL},
     [0xE2] = {IM_LD, AM_MR_R, RT_C, RT_A}, //CHANGE IT TO LDH
+    [0xE5] = {IM_PUSH, AM_IMP, RT_HL},
+    [0xE7] = {IM_RST, AM_IMP, RT_NONE, RT_NONE, CT_NONE, 0x20},
+    [0xE9] = {IM_JP, AM_MR, RT_HL},
     [0xEA] = {IM_LD, AM_A16_R, RT_NONE, RT_A},
+    [0xEF] = {IM_RST, AM_IMP, RT_NONE, RT_NONE, CT_NONE, 0x28},
 
     //0xFX
     [0XF0] = {IM_LDH, AM_R_A8, RT_A},
+    [0xF1] = {IM_POP, AM_IMP, RT_AF},
     [0xF2] = {IM_LD, AM_R_MR, RT_A, RT_C}, //CHANGE IT TO LDH
     [0xF3] = {IM_DI},
+    [0xF5] = {IM_PUSH, AM_IMP, RT_AF},
+    [0xF7] = {IM_RST, AM_IMP, RT_NONE, RT_NONE, CT_NONE, 0x30},
     [0xFA] = {IM_LD, AM_R_A16, RT_A},
+    [0xFF] = {IM_RST, AM_IMP, RT_NONE, RT_NONE, CT_NONE, 0x38},
 };
 
 Instruction* getInstructionByOpcode(uint8_t opcode) {
