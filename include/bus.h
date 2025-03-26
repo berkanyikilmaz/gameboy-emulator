@@ -4,10 +4,11 @@
 
 class Cartridge;
 class CPU;
+class RAM;
 
 class Bus {
 public:
-    Bus(Cartridge *cart, CPU *cpu);
+    Bus(Cartridge *cart, CPU *cpu, RAM *ram);
 
     uint8_t read(uint16_t addr) const;
     uint16_t read16(uint16_t addr) const;
@@ -16,6 +17,7 @@ public:
 private:
     Cartridge* m_cartridge;
     CPU* m_cpu;
+    RAM* m_ram;
 };
 
 #endif //BUS_H

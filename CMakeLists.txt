@@ -28,7 +28,8 @@ add_executable(gameboy_cpp
         src/bus.cpp
         src/cpu.cpp
         src/instructions.cpp
-        src/utils/debug.cpp)
+        src/utils/debug.cpp
+        src/ram.cpp)
 
 target_include_directories(gameboy_cpp PRIVATE include)
 

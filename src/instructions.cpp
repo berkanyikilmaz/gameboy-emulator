@@ -115,12 +115,13 @@ Instruction instructions[0x100] = {
     [0xC3] = {IM_JP, AM_D16},
 
     //0xEX
-    [0xE2] = {IM_LD, AM_MR_R, RT_C, RT_A},
+    [0xE0] = {IM_LDH, AM_A8_R, RT_NONE, RT_A},
+    [0xE2] = {IM_LD, AM_MR_R, RT_C, RT_A}, //CHANGE IT TO LDH
     [0xEA] = {IM_LD, AM_A16_R, RT_NONE, RT_A},
 
-
     //0xFX
-    [0xF2] = {IM_LD, AM_R_MR, RT_A, RT_C},
+    [0XF0] = {IM_LDH, AM_R_A8, RT_A},
+    [0xF2] = {IM_LD, AM_R_MR, RT_A, RT_C}, //CHANGE IT TO LDH
     [0xF3] = {IM_DI},
     [0xFA] = {IM_LD, AM_R_A16, RT_A},
 };

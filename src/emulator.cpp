@@ -6,7 +6,7 @@
 
 Emulator::Emulator(int argc, char** argv)
 : m_paused(false), m_running(true), m_ticks(0), m_window(nullptr)
-, m_bus(nullptr), m_cpu(nullptr), m_cartridge(nullptr) {
+, m_bus(nullptr), m_cpu(nullptr), m_cartridge(nullptr), m_ram(nullptr) {
     if (argc < 2) {
         std::cerr << "Usage: " << argv[0] << " <rom file>" << std::endl;
         return;
@@ -17,8 +17,9 @@ Emulator::Emulator(int argc, char** argv)
 
     m_cartridge = std::make_unique<Cartridge>(argv[1]);
     m_cpu = std::make_unique<CPU>(this);
+    m_ram = std::make_unique<RAM>();
 
-    m_bus = std::make_unique<Bus>(m_cartridge.get(), m_cpu.get());
+    m_bus = std::make_unique<Bus>(m_cartridge.get(), m_cpu.get(), m_ram.get());
     m_cpu->connectBus(m_bus.get());
     m_cartridge->connectBus(m_bus.get());
 }

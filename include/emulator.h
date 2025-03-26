@@ -8,6 +8,7 @@
 #include "bus.h"
 #include "cpu.h"
 #include "cartridge.h"
+#include "ram.h"
 
 class Emulator {
 public:
@@ -24,6 +25,7 @@ private:
     std::unique_ptr<Bus> m_bus;
     std::unique_ptr<CPU> m_cpu;
     std::unique_ptr<Cartridge> m_cartridge;
+    std::unique_ptr<RAM> m_ram;
 };
 
 #endif //EMULATOR_H

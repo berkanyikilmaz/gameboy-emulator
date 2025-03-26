@@ -15,6 +15,7 @@ static constexpr std::array<void(CPU::*)(), static_cast<size_t>(IM_COUNT)> getIn
     arr.fill(&CPU::executeNONE);
     arr[IM_NOP] = &CPU::executeNOP;
     arr[IM_LD] = &CPU::executeLD;
+    arr[IM_LDH] = &CPU::executeLDH;
     arr[IM_JP] = &CPU::executeJP;
     arr[IM_DI] = &CPU::executeDI;
 
@@ -55,18 +56,7 @@ void CPU::fetchInstruction() {
     m_registers.PC++;
 }
 
-/*
-*I suppose you could make the switch/case a lot faster with threaded code.
-Make a hash value for each op_code. e.g.
-hash(AM_MR_R) => 29
-Then make a lookup table (e.g. static void *labels[op_codes];) that takes these hashes and points directly to the execution code like this:
-
-#define EXECUTE  goto *(labels[op_code])
-
-this will make the code from O(n) to O(1) which I suppose is a good optimization, since the CPU instruction-lookup is the heart of the simulation, and you have more than 200 opcodes to check!
- *
- * NOTES FOR THE FUTURE!!!
- */
+// TODO: Create methods to remove duplicate executions.
 void CPU::fetchData() {
     m_memDest = 0;
     m_destIsMem = false;
@@ -161,6 +151,7 @@ void CPU::fetchData() {
             m_memDest = (hi << 8) | lo;
             m_destIsMem = true;
             m_fetchedData = readReg(m_currInstruction->reg2);
+            return;
         case AM_MR_D8:
             m_fetchedData = m_bus->read(m_registers.PC);
             m_emulator->cycle(1);
@@ -200,7 +191,6 @@ void CPU::executeNONE() {
 }
 
 void CPU::executeNOP() {
-    Debug::log("\tNOP");
 }
 
 void CPU::executeLD() {
@@ -212,7 +202,6 @@ void CPU::executeLD() {
         else {
             m_bus->write(m_memDest, m_fetchedData);
         }
-
         return;
     }
 
@@ -229,8 +218,16 @@ void CPU::executeLD() {
     writeReg(m_currInstruction->reg1, m_fetchedData);
 }
 
+void CPU::executeLDH() {
+    if (m_currInstruction->reg1 == RT_A) {
+        writeReg(RT_A, m_bus->read(0xFF00 | m_fetchedData));
+    } else {
+        m_bus->write(0xFF00 | m_fetchedData, readReg(RT_A));
+    }
+    m_emulator->cycle(1);
+}
+
 void CPU::executeJP() {
-    Debug::log("\tJP");
     if (checkCond()) {
         m_registers.PC = m_fetchedData;
         m_emulator->cycle(1);
@@ -242,13 +239,11 @@ void CPU::executeJP() {
 
 void CPU::executeDI() {
     m_IME = false;
-    Debug::log("\tDI");
 }
 
 void CPU::executeXOR() {
     m_registers.A = m_registers.A ^ m_fetchedData;
     setFlags(m_registers.A, false, false, false);
-    Debug::log("\tXOR");
 }
 
 void CPU::setFlags(const char z, const char n, const char h, const char c) {
@@ -313,7 +308,7 @@ const uint8_t CPU::readReg(RegisterType regType) const {
             return m_registers.PC;
         default:
             Debug::logErr("Unknown register type", static_cast<uint8_t>(regType));
-        return 0;
+            return 0;
     }
 }
 
@@ -367,6 +362,7 @@ void CPU::writeReg(const RegisterType regType, const uint16_t data) {
             return;
         default:
             Debug::logErr("Unknown register type", static_cast<uint8_t>(regType));
+            return;
     }
 }
 
@@ -380,7 +376,7 @@ const uint16_t CPU::fetchData16Bit(uint16_t addr) {
 
 void CPU::printInstruction() {
     const auto fmt = std::format(
-        "${:04X}: {:<7} ({:02X} {:02X} {:02X}) A: {:02X} B: {:02X} C: {:02X}",
+        "${:04X}: {:<7} ({:02X} {:02X} {:02X}) A: {:02X} BC: {:02X}{:02X} DE: {:02X}{:02X} HL: {:02X}{:02X}",
         m_registers.PC,
         magic_enum::enum_name(m_currInstruction->mnemonic),
         m_currOpcode,
@@ -388,7 +384,11 @@ void CPU::printInstruction() {
         m_bus->read(m_registers.PC + 2),
         m_registers.A,
         m_registers.B,
-        m_registers.C
+        m_registers.C,
+        m_registers.D,
+        m_registers.E,
+        m_registers.H,
+        m_registers.L
     );
     Debug::log(fmt);
 }

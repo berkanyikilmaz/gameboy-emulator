@@ -1,6 +1,7 @@
 #ifndef CPU_H
 #define CPU_H
 #include <array>
+#include <bus.h>
 #include <cstdint>
 
 #include "instructions.h"
@@ -39,10 +40,14 @@ public:
     const bool getFlagZ() const { return BitUtils::getBit(m_registers.F, 7); }
     const bool getFlagC() const { return BitUtils::getBit(m_registers.F, 4); }
 
+    void writeIE(const uint8_t data) { m_IE = data; };
+    const uint8_t readIE() const { return m_IE; };
+
     // Instruction Exec
     void executeNONE();
     void executeNOP();
     void executeLD();
+    void executeLDH();
     void executeJP();
     void executeDI();
     void executeXOR();
@@ -67,6 +72,7 @@ private:
 
     bool m_halted;
     bool m_IME; //Interrupt Master Enable Flag
+    uint8_t m_IE; //Interrupt Enable Register
 
     Emulator *m_emulator;
     Bus *m_bus;
